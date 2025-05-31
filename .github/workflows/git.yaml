@@ -1,31 +1,33 @@
+# Line 1: Workflow name
 name: Deploy Medusa Store to AWS ECS
 
+# Line 2–4: Run this workflow when you push to "main"
 on:
   push:
     branches:
       - main
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  deploy: # Job name
+    runs-on: ubuntu-latest # GitHub runner
 
     steps:
-      # Step 1: Checkout the code
+      # Step 1: Clone the repo into the GitHub runner
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Docker
+      # Step 2: Set up Docker Buildx so it can build images
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Log in to Docker Hub
+      # Step 3: Log in to Docker Hub using your GitHub Secrets
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}    # 👈 You must add this secret in GitHub
+          password: ${{ secrets.DOCKER_PASSWORD }}    # 👈 You must add this secret in GitHub
 
-      # Step 4: Build the Docker image
+      # Step 4: Build Docker image with tag "latest"
       - name: Build Docker image
         run: |
           docker build -t hemanth42079/medusa-store:latest .
@@ -35,21 +37,15 @@ jobs:
         run: |
           docker push hemanth42079/medusa-store:latest
 
-      # Step 6: Configure AWS credentials
+      # Step 6: Set up AWS credentials from GitHub Secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}              # 👈 Add this secret
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}      # 👈 Add this secret
           aws-region: us-east-1
 
-      # Step 7: Pull Docker image (for ECS)
-      - name: Pull Docker image from Docker Hub
-        run: |
-          docker pull hemanth42079/medusa-store:latest
-          echo "Pulled image: hemanth42079/medusa-store:latest"
-
-      # Step 8: Update ECS task definition
+      # Step 7: Update ECS task definition with new image
       - name: Update ECS task definition
         id: update-task-def
         run: |
@@ -69,7 +65,7 @@ jobs:
 
           echo "task_definition_arn=$NEW_TASK_DEF_ARN" >> $GITHUB_OUTPUT
 
-      # Step 9: Update ECS service
+      # Step 8: Update ECS service to use the new task
       - name: Update ECS service
         run: |
           aws ecs update-service \
@@ -78,13 +74,11 @@ jobs:
             --task-definition ${{ steps.update-task-def.outputs.task_definition_arn }} \
             --force-new-deployment \
             --region us-east-1
-          echo "Updated ECS service"
 
-      # Step 10: Wait for ECS service to stabilize
+      # Step 9: Wait for ECS to finish deploying
       - name: Wait for ECS service to stabilize
         run: |
           aws ecs wait services-stable \
             --cluster medusa-cluster \
             --services medusa-service \
             --region us-east-1
-          echo "ECS service is now stable"
