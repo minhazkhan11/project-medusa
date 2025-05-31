@@ -12,7 +12,7 @@ resource "aws_ecs_task_definition" "medusa_task" {
 
   container_definitions = jsonencode([{
     name      = "medusa"
-    image     = "${aws_ecr_repository.medusa_repo.repository_url}:latest"
+    image     = "minhazkhan/medusa:latest"
     essential = true
     portMappings = [{
       containerPort = 9000
