@@ -28,8 +28,8 @@ jobs:
       # Step 4: Build and push Docker image
       - name: Build and Push Docker image
         run: |
-          docker build -t hemanth42079/medusa-store:latest .
-          docker push hemanth42079/medusa-store:latest
+          docker build -t minhazkhan/medusa .
+          docker push minhazkhan/medusa
 
       # Step 5: Configure AWS credentials
       - name: Configure AWS credentials
