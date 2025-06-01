@@ -28,8 +28,8 @@ jobs:
       # Step 4: Build and push Docker image
       - name: Build and Push Docker image
         run: |
-          docker build -t minhazkhan/medusa .
-          docker push minhazkhan/medusa
+          docker build -t minhazkhan/medusa:latest .
+          docker push minhazkhan/medusa:latest
 
       # Step 5: Configure AWS credentials
       - name: Configure AWS credentials
@@ -47,11 +47,11 @@ jobs:
             --task-definition medusa-task \
             --region us-east-1)
 
-         NEW_TASK_DEF=$(echo "$TASK_DEF" | jq '
-          .taskDefinition |
-          .containerDefinitions[0].image = "minhazkhan/medusa:latest" |
-          .containerDefinitions[0].environment |= map(select(.name != "REDIS_URL")) |
-          del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq '
+            .taskDefinition |
+            .containerDefinitions[0].image = "minhazkhan/medusa:latest" |
+            .containerDefinitions[0].environment |= map(select(.name != "REDIS_URL")) |
+            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
 
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
             --region us-east-1 \
