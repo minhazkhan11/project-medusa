@@ -1,3 +1,4 @@
+
 name: Deploy Medusa Backend to AWS ECS (Dev)
 
 on:
@@ -28,9 +29,8 @@ jobs:
       # Step 4: Build and push Docker image
       - name: Build and Push Docker image
         run: |
-          docker build -t minhazkhan/medusa:latest .
-          docker push minhazkhan/medusa:latest
-
+          docker build -t minhazkhan/medusa .
+          docker push minhazkhan/medusa
       # Step 5: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -46,20 +46,15 @@ jobs:
           TASK_DEF=$(aws ecs describe-task-definition \
             --task-definition medusa-task \
             --region us-east-1)
-
-          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq '
-            .taskDefinition |
-            .containerDefinitions[0].image = "minhazkhan/medusa:latest" |
-            .containerDefinitions[0].environment |= map(select(.name != "REDIS_URL")) |
+          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq \
+            '.taskDefinition |
+            .containerDefinitions[0].image = "hemanth42079/medusa-store:latest" |
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
-
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
             --region us-east-1 \
             --cli-input-json "$NEW_TASK_DEF" \
             | jq -r '.taskDefinition.taskDefinitionArn')
-
           echo "task_definition_arn=$NEW_TASK_DEF_ARN" >> $GITHUB_OUTPUT
-
       # Step 7: Deploy new task to ECS service
       - name: Update ECS service
         run: |
@@ -69,7 +64,6 @@ jobs:
             --task-definition ${{ steps.update-task-def.outputs.task_definition_arn }} \
             --force-new-deployment \
             --region us-east-1
-
       # Step 8: Wait until ECS service becomes stable
       - name: Wait for ECS service to stabilize
         run: |
